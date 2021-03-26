@@ -37,6 +37,11 @@
 #include "foundation/image/color.h"
 #include "foundation/math/vector.h"
 
+// OIIO headers.
+#include "foundation/platform/_beginoiioheaders.h"
+#include "OpenImageIO/texture.h"
+#include "foundation/platform/_endoiioheaders.h"
+
 // OSL headers.
 #include "foundation/platform/_beginoslheaders.h"
 #include "OSL/oslexec.h"
@@ -75,6 +80,7 @@ class OSLShaderGroupExec
     OSLShadingSystem&                   m_osl_shading_system;
     foundation::Arena&                  m_arena;
 
+    OIIO::TextureSystem::Perthread*     m_oiio_thread_info;
     OSL::PerThreadInfo*                 m_osl_thread_info;
     OSL::ShadingContext*                m_osl_shading_context;
     char*                               m_osl_mem_pool;

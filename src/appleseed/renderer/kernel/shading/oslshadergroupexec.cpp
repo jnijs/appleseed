@@ -52,8 +52,9 @@ namespace renderer
 OSLShaderGroupExec::OSLShaderGroupExec(OSLShadingSystem& shading_system, Arena& arena)
   : m_osl_shading_system(shading_system)
   , m_arena(arena)
+  , m_oiio_thread_info(shading_system.texturesys()->create_thread_info())
   , m_osl_thread_info(shading_system.create_thread_info())
-  , m_osl_shading_context(shading_system.get_context(m_osl_thread_info))
+  , m_osl_shading_context(shading_system.get_context(m_osl_thread_info, m_oiio_thread_info))
 {
 }
 
@@ -64,6 +65,20 @@ OSLShaderGroupExec::~OSLShaderGroupExec()
 
     if (m_osl_thread_info)
         m_osl_shading_system.destroy_thread_info(m_osl_thread_info);
+
+    if (m_oiio_thread_info)
+    {
+        // The oiio thread info cannot be deleted using OIIO::TextureSystem::destroy_thread_info()
+        // since the texture system will still iterate over all thread_info blocks ever created when requesting statistics (e.g. in CPURenderDevice::~CPURenderDevice()).
+        // The texture system destructor will cleanup all thread info blocks.
+
+        // We do want to cleanup the microcache associated with this m_oiio_thread_info.
+        // Mark all microcaches for purging. Since force == false, the main cache remains untouched unless the tiles need to be invalidated anyway.
+        m_osl_shading_system.texturesys()->invalidate_all(false);
+
+        // Force purging the microcache associated with this thread info.
+        m_osl_shading_system.texturesys()->get_perthread_info(m_oiio_thread_info);
+    }
 }
 
 void OSLShaderGroupExec::execute_shading(
